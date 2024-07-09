@@ -31,7 +31,6 @@ param (
 	[String]$WingetVersion = "v1.8.1791",
 	[String]$UiXamlVersion = "2.8.6",
 	[String]$Arch = "x86",
-	[Boolean]$Cleanupup = $true,
 	[switch]$Dry,
 	[switch]$Cleanup
 )
@@ -108,7 +107,7 @@ function GWC-Main {
 }
 
 function Commands {
-	if($Cleanupup) {
+	if($Cleanup) {
 		GWC-Cleanup
 		break
 	}

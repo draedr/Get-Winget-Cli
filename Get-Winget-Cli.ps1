@@ -98,7 +98,7 @@ function Install {
 		# Install Winget
 		Write-Host "[INFO] Installing Winget-Cli"
 		Add-AppxPackage -Path ".\$($WorkspaceFolder)\Microsoft.DesktopAppInstaller.msixbundle"
-		Add-AppxProvisionedPackage -Online -PackagePath ".\$($WorkspaceFolder)\Microsoft.DesktopAppInstaller.msixbundle" -LicensePath ".\License1.xml"
+		Add-AppxProvisionedPackage -Online -PackagePath ".\$($WorkspaceFolder)\Microsoft.DesktopAppInstaller.msixbundle" -LicensePath ".\$($WorkspaceFolder)\License1.xml"
 }
 
 function Cleanup {

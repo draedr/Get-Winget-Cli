@@ -92,13 +92,13 @@ function Download {
 function Install {
 		# Install Dependencies
 		Write-Host "[INFO] Installing Dependencies..."
-		Add-AppxPackage -Path ".\$WorkspaceFolder\Microsoft.VCLibs.Desktop.appx"
-		Add-AppxPackage -Path ".\$WorkspaceFolder\microsoft.ui.xaml.zip"
+		Add-AppxPackage -Path ".\$($WorkspaceFolder)\Microsoft.VCLibs.Desktop.appx"
+		Add-AppxPackage -Path ".\$($WorkspaceFolder)\microsoft.ui.xaml.appx"
 
 		# Install Winget
 		Write-Host "[INFO] Installing Winget-Cli"
-		Add-AppxPackage -Path ".\$WorkspaceFolder\Microsoft.DesktopAppInstaller.msixbundle"
-		Add-AppxProvisionedPackage -Online -PackagePath ".\$WorkspaceFolder\Microsoft.DesktopAppInstaller.msixbundle" -LicensePath ".\License1.xml"
+		Add-AppxPackage -Path ".\$($WorkspaceFolder)\Microsoft.DesktopAppInstaller.msixbundle"
+		Add-AppxProvisionedPackage -Online -PackagePath ".\$($WorkspaceFolder)\Microsoft.DesktopAppInstaller.msixbundle" -LicensePath ".\License1.xml"
 }
 
 function Cleanup {

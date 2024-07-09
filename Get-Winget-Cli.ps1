@@ -19,12 +19,21 @@ Which version of Microsoft.Ui.Xaml to download from NuGet. Currently set to 2.8.
 .PARAMETER Arch
 Which architecture to install. Currently supported only values "x86" or "arm64".
 
-.PARAMETER Cleanup
-Specify if the workspace folder should be deleted after completion. Defaults to true.
+.FUNCTIONALITY Cleanup
+Cleans the workspace directory. To be used in case of an error interrupting the script and leaving the workspace
 
-.PARAMETER Dry
-Specify if script should by run "Dry", by only setting up downloads and files, but without actually installing them.
+.FUNCTIONALITY Dry
+Runs the script without actually installing anything.
 
+.OUTPUTS
+None. Get-Winget-Cli.ps1 doesn't generate any output.
+
+.EXAMPLE
+PS> .\Get-Winget-Cli.ps1
+.EXAMPLE
+PS> .\Get-Winget-Cli.ps1 -Dry
+.EXAMPLE
+PS> .\Get-Winget-Cli.ps1 -Cleanup
 #> 
 param (
 	[String]$WorkspaceFolder = ".work",
@@ -32,24 +41,28 @@ param (
 	[String]$UiXamlVersion = "2.8.6",
 	[String]$Arch = "x86",
 	[switch]$Dry,
-	[switch]$Cleanup
+	[switch]$Cleanup,
+	[switch]$Workspace
 )
 
-function GWC-Download {
-	$Arch = $Arch.ToLower()
-
-	$releases_uri = "https://api.github.com/repos/microsoft/winget-cli/releases/tags/$WingetVersion"
-	$VCLibs_uri = if ( $Arch.Contains("arm64") ) { "https://aka.ms/Microsoft.VCLibs.arm64.14.00.Desktop.appx" } else { "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx" }
-	$ui_xaml_uri = "https://www.nuget.org/api/v2/package/Microsoft.UI.Xaml/$UiXamlVersion"
-
+function PrepareWorkspace {
 	# Setting up workspace
 	Write-Host "Setting up workspace..."
-	if( Test-Path -Path $WorkspaceFolder ) {
+	if( Test-Path -Path "$WorkspaceFolder" ) {
 		Write-Host "Resetting Workspace..."
-		GWC-Cleanup
+		Cleanup
 	}
-	
-	$WorkspaceFolderObj = New-Item -Path "." -Name $WorkspaceFolder, -ItemType Directory
+
+	$WorkspaceFolderObj = New-Item -Path "." -Name "$($WorkspaceFolder)" -ItemType Directory
+	Write-Host "Created Workspace at $($WorkspaceFolderObj.FullName)"
+}
+
+function Download {
+	$Arch = $Arch.ToLower()
+
+	$releases_uri = "https://api.github.com/repos/microsoft/winget-cli/releases/tags/$($WingetVersion)"
+	$VCLibs_uri = if ( $Arch.Contains("arm64") ) { "https://aka.ms/Microsoft.VCLibs.arm64.14.00.Desktop.appx" } else { "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx" }
+	$ui_xaml_uri = "https://www.nuget.org/api/v2/package/Microsoft.UI.Xaml/$($UiXamlVersion)"
 
 	# Getting winget
 	Write-Host "Downloading Winget..."
@@ -58,25 +71,25 @@ function GWC-Download {
 	foreach( $asset in $releases.assets ) {
 		# Download License file
 		if ( $asset.name.Contains("License1.xml") ) {
-			Invoke-WebRequest $asset.url -Out ".\$WorkspaceFolder\License1.xml"
+			Invoke-WebRequest $asset.url -Out ".\$($WorkspaceFolder)\License1.xml"
 		}
 		
 		# Download Winget Release
 		if ( $asset.name.Contains("msixbundle") ) {
-			Invoke-WebRequest $asset.url -Out ".\$WorkspaceFolder\Microsoft.DesktopAppInstaller.msixbundle"
+			Invoke-WebRequest $asset.url -Out ".\$($WorkspaceFolder)\Microsoft.DesktopAppInstaller.msixbundle"
 		}
 	}
 
 	# Getting Dependencies
 	Write-Host "Downloading Dependencies..."
-	Invoke-WebRequest $VCLibs_uri -Out "Microsoft.VCLibs.Desktop.appx"
-	Invoke-WebRequest $ui_xaml_uri -Out "microsoft.ui.xaml.zip"
+	Invoke-WebRequest $VCLibs_uri -Out ".\$($WorkspaceFolder)\Microsoft.VCLibs.Desktop.appx"
+	Invoke-WebRequest $ui_xaml_uri -Out ".\$($WorkspaceFolder)\microsoft.ui.xaml.zip"
 
-	Expand-Archive -LiteralPath '.\microsoft.ui.xaml.zip' -DestinationPath '.\$WorkspaceFolder\microsoft.ui.xaml'
-	cp "microsoft.ui.xaml\tools\Appx\$Arch\Release\*.appx' '.\$WorkspaceFolder\microsoft.ui.xaml.appx"
+	Expand-Archive -LiteralPath ".\$($WorkspaceFolder)\microsoft.ui.xaml.zip" -DestinationPath ".\$($WorkspaceFolder)\microsoft.ui.xaml"
+	Copy-Item ".\$($WorkspaceFolder)\microsoft.ui.xaml\tools\Appx\$($Arch)\Release\*.appx" -Destination ".\$($WorkspaceFolder)\microsoft.ui.xaml.appx"
 }
 
-function GWC-Install {
+function Install {
 		# Install Dependencies
 		Write-Host "Installing Dependencies..."
 		Add-AppxPackage -Path ".\$WorkspaceFolder\Microsoft.VCLibs.Desktop.appx"
@@ -88,31 +101,47 @@ function GWC-Install {
 		Add-AppxProvisionedPackage -Online -PackagePath ".\$WorkspaceFolder\Microsoft.DesktopAppInstaller.msixbundle" -LicensePath ".\License1.xml"
 }
 
-function GWC-Cleanup {
-		Write-Host "Cleaning up workspace at (.\$WorkspaceFolder)"
+function Cleanup {
+		Write-Host "Cleaning up workspace at (.\$($WorkspaceFolder))"
 
 		if( Test-Path -Path $WorkspaceFolder ) {
 		Remove-Item -Path $WorkspaceFolder -Recurse
 		}
 }
 
-function GWC-Main {
-	GWC-Download
+function Post-Install {
+	if (Get-Command "winget" -errorAction SilentlyContinue)
+	{
+		"Congratulations! Winget has been installed. You can try it by typing 'winget'."
+	}
+}
+
+function Main {
+	PrepareWorkspace
+
+	Download
 
 	if( !$Dry ) {
-		GWC-Install
+		Install
 	}
+	
+	Cleanup
 
-	GWC-Cleanup
+	Post-Install
 }
 
 function Commands {
 	if($Cleanup) {
-		GWC-Cleanup
+		Cleanup
+		break
+	}
+
+	if($Workspace) {
+		PrepareWorkspace
 		break
 	}
 	
-	GWC-Main
+	Main
 }
 
 Commands

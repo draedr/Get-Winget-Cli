@@ -47,14 +47,14 @@ param (
 
 function PrepareWorkspace {
 	# Setting up workspace
-	Write-Host "Setting up workspace..."
+	Write-Host "[INFO] Setting up workspace..."
 	if( Test-Path -Path "$WorkspaceFolder" ) {
 		Write-Host "Resetting Workspace..."
 		Cleanup
 	}
 
 	$WorkspaceFolderObj = New-Item -Path "." -Name "$($WorkspaceFolder)" -ItemType Directory
-	Write-Host "Created Workspace at $($WorkspaceFolderObj.FullName)"
+	Write-Host "[INFO] Created Workspace at $($WorkspaceFolderObj.FullName)"
 }
 
 function Download {
@@ -65,7 +65,7 @@ function Download {
 	$ui_xaml_uri = "https://www.nuget.org/api/v2/package/Microsoft.UI.Xaml/$($UiXamlVersion)"
 
 	# Getting winget
-	Write-Host "Downloading Winget..."
+	Write-Host "[INFO] Downloading Winget..."
 	$releases = Invoke-WebRequest -Uri $releases_uri | ConvertFrom-Json
 
 	foreach( $asset in $releases.assets ) {
@@ -81,7 +81,7 @@ function Download {
 	}
 
 	# Getting Dependencies
-	Write-Host "Downloading Dependencies..."
+	Write-Host "[INFO] Downloading Dependencies..."
 	Invoke-WebRequest $VCLibs_uri -Out ".\$($WorkspaceFolder)\Microsoft.VCLibs.Desktop.appx"
 	Invoke-WebRequest $ui_xaml_uri -Out ".\$($WorkspaceFolder)\microsoft.ui.xaml.zip"
 
@@ -91,18 +91,18 @@ function Download {
 
 function Install {
 		# Install Dependencies
-		Write-Host "Installing Dependencies..."
+		Write-Host "[INFO] Installing Dependencies..."
 		Add-AppxPackage -Path ".\$WorkspaceFolder\Microsoft.VCLibs.Desktop.appx"
 		Add-AppxPackage -Path ".\$WorkspaceFolder\microsoft.ui.xaml.zip"
 
 		# Install Winget
-		Write-Host "Installing Winget-Cli"
+		Write-Host "[INFO] Installing Winget-Cli"
 		Add-AppxPackage -Path ".\$WorkspaceFolder\Microsoft.DesktopAppInstaller.msixbundle"
 		Add-AppxProvisionedPackage -Online -PackagePath ".\$WorkspaceFolder\Microsoft.DesktopAppInstaller.msixbundle" -LicensePath ".\License1.xml"
 }
 
 function Cleanup {
-		Write-Host "Cleaning up workspace at (.\$($WorkspaceFolder))"
+		Write-Host "[INFO] Cleaning up workspace at (.\$($WorkspaceFolder))"
 
 		if( Test-Path -Path $WorkspaceFolder ) {
 		Remove-Item -Path $WorkspaceFolder -Recurse
@@ -112,11 +112,27 @@ function Cleanup {
 function Post-Install {
 	if (Get-Command "winget" -errorAction SilentlyContinue)
 	{
-		"Congratulations! Winget has been installed. You can try it by typing 'winget'."
+		"[INFO] Congratulations! Winget has been installed. You can try it by typing 'winget'."
 	}
 }
 
+function Pre-Install {
+	if (Get-Command "winget" -errorAction SilentlyContinue)
+	{
+		Write-Host "[ERROR] Winget is already installed on this system. This script is to be used only for first installation; To update Winget you can use Winget itself."
+		return $true;
+	}
+
+	return $false;
+}
+
 function Main {
+	$preinstall = Pre-Install
+
+	if( $preinstall ) {
+		return;
+	}
+
 	PrepareWorkspace
 
 	Download

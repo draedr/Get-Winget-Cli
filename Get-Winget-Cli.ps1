@@ -120,13 +120,20 @@ function Pre-Install {
 	if (Get-Command "winget" -errorAction SilentlyContinue)
 	{
 		Write-Host "[ERROR] Winget is already installed on this system. This script is to be used only for first installation; To update Winget you can use Winget itself."
-		exit;
+		
+		Terminate
 	}
 
 	if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
 		Start-Process PowerShell -Verb RunAs "-NoProfile -ExecutionPolicy Bypass -Command `"cd '$pwd'; & '$PSCommandPath';`"";
-		exit;
+		
+		Terminate
 	}
+}
+
+function Terminate {
+	Read-Host -Prompt "Press Any Key to exit"
+	exit;
 }
 
 function Main {
